@@ -1,0 +1,197 @@
+<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BSI · ทดสอบผู้เชี่ยวชาญออนไลน์</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
+<style>:root{--b7:#6B5836;--b5:#8C7A54;--b1:#D5C9A9;--cr:#F2F0E5;--pp:#FAF8F1;--ok:#5A7A46;--bad:#9C4A3C}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Sarabun,sans-serif;background:var(--cr);color:#33302A;font-size:16px;padding:14px}
+.w{max-width:860px;margin:0 auto}.card{background:var(--pp);border:1px solid #EAE3CF;border-radius:14px;padding:18px;margin-bottom:12px}
+h1{font-family:"Cormorant Garamond",serif;color:var(--b7);font-size:24px}h2{color:var(--b7);font-size:17px;margin-bottom:8px}
+label{display:block;font-size:12px;color:#7A7568;margin:10px 0 3px}
+input,textarea,select{width:100%;padding:9px 11px;border:2px solid var(--b1);border-radius:9px;font:inherit;background:#fff}
+.btn{background:var(--b7);color:#fff;border:0;border-radius:10px;padding:11px 22px;font:inherit;font-weight:700;cursor:pointer;margin-top:10px}
+.bo{background:transparent;border:2px solid var(--b7);color:var(--b7)}
+.ch{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--b1);border-radius:9px;padding:9px 12px;margin:4px 0;font:inherit;font-size:15px;cursor:pointer}
+.ch.on{background:var(--b7);color:#fff;border-color:var(--b7)}
+.pill{display:inline-block;border-radius:99px;padding:2px 11px;font-size:12px;color:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:9px;overflow:hidden}
+th{background:var(--b7);color:var(--cr);padding:6px 8px;text-align:left}td{padding:6px 8px;border-bottom:1px solid #EAE3CF}
+.err{color:var(--bad);font-size:14px;margin-top:8px}.okm{color:var(--ok);font-size:14px;margin-top:8px}
+.note{background:#F7EFD8;border:1px solid var(--b1);border-radius:8px;padding:7px 11px;font-size:12.5px;color:#7a5b00;margin-top:8px}</style></head>
+<body><div class="w">
+<div class="card" style="display:flex;align-items:center;gap:10px">
+<div><h1>BrightStar Assessment Institute</h1><div style="font-size:12px;color:#7A7568">ระบบทดสอบคัดเลือกผู้ทดสอบออนไลน์ · BSI-EXM-ONLINE</div></div>
+<div id="who" style="margin-left:auto;font-size:13px"></div></div>
+<div id="app"></div></div>
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbzYcN90TXUwJkpmsLVwlesLuFya8jGqYpx-Y_BJhgzifiUTmE6aaknA_82I64TcKJGG/exec';
+let TK = null, ROLE = null, EXAMSTATE = null;
+const $ = id => document.getElementById(id);
+const esc = s => ('' + (s ?? '')).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(body) {
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, token: TK }) });
+  return r.json();
+}
+function view(html) { $('app').innerHTML = html; }
+
+// ===== Login / สมัคร =====
+function loginView(msg) {
+  view(`<div class="card" style="max-width:420px;margin:30px auto"><h2>เข้าสู่ระบบ</h2>
+  <label>อีเมล</label><input id="em"><label>PIN 6 หลัก</label><input id="pw" type="password" maxlength="6">
+  <button class="btn" style="width:100%" onclick="doLogin()">เข้าสู่ระบบ</button>
+  <p class="err" id="lerr">${esc(msg || '')}</p>
+  <p style="text-align:center;margin-top:8px"><button class="bo btn" onclick="signupView()">สมัครเข้าทดสอบ (ผู้สมัครใหม่)</button>
+  <button class="bo btn" onclick="verifyView()">🔎 ตรวจทะเบียนผู้ทดสอบ</button></p></div>`);
+}
+function verifyView() {
+  view(`<div class="card" style="max-width:420px;margin:30px auto"><h2>ตรวจทะเบียนผู้ทดสอบ BSI</h2>
+  <p style="font-size:13px;color:#7A7568">สำหรับโรงเรียน/ผู้ปกครอง — ไม่ต้องเข้าสู่ระบบ</p>
+  <label>เลขทะเบียน (EX###)</label><input id="vx" placeholder="EX001">
+  <button class="btn" onclick="doVerify()">ตรวจสอบ</button> <button class="btn bo" onclick="loginView()">กลับ</button>
+  <div id="vres" style="margin-top:10px"></div></div>`);
+}
+async function doVerify() {
+  const r = await api({ action: 'verifyEx', exid: $('vx').value });
+  $('vres').innerHTML = r.ok
+    ? `<div style="background:#EFF3EA;border:2px solid var(--ok);border-radius:9px;padding:10px;font-size:14px"><b style="color:var(--ok)">✓ พบในทะเบียน BSI</b><br>${esc(r.exid)} · ${esc(r.name)} · สถานะ: <b>${esc(r.status)}</b> · ตั้งแต่ ${esc(r.since)}</div>`
+    : `<p class="err">✕ ${esc(r.msg)}</p>`;
+}
+function signupView() {
+  view(`<div class="card" style="max-width:480px;margin:20px auto"><h2>สมัครเข้าทดสอบผู้ทดสอบ BSI</h2>
+  <label>ชื่อ-สกุล</label><input id="snm"><label>อีเมล</label><input id="sem">
+  <div class="note"><b>สัญญารักษาความลับ (สรุป):</b> ข้อสอบ ข้อมูลเด็ก และเนื้อหาทั้งหมดเป็นความลับ ห้ามคัดลอก/ถ่ายภาพ/เผยแพร่ · การละเมิด = ตัดสิทธิ์และรับผิดตามกฎหมาย PDPA</div>
+  <label style="display:flex;gap:8px;align-items:center;font-size:14px;color:#33302A"><input type="checkbox" id="nda" style="width:auto"> ข้าพเจ้าอ่านและยอมรับสัญญารักษาความลับ</label>
+  <button class="btn" onclick="doSignup()">สมัคร</button> <button class="btn bo" onclick="loginView()">กลับ</button>
+  <p class="err" id="serr"></p></div>`);
+}
+async function doSignup() {
+  const r = await api({ action: 'signup', name: $('snm').value, email: $('sem').value, acceptNda: $('nda').checked });
+  if (!r.ok) return $('serr').textContent = r.msg;
+  view(`<div class="card" style="max-width:480px;margin:30px auto;text-align:center"><h2>สมัครสำเร็จ</h2>
+  <p>PIN ของคุณ (แสดงครั้งเดียว — จดไว้):</p><div style="font-size:40px;font-weight:700;color:var(--b7)">${esc(r.pin)}</div>
+  <button class="btn" onclick="loginView()">ไปเข้าสู่ระบบ</button></div>`);
+}
+async function doLogin() {
+  const r = await api({ action: 'login', email: $('em').value, pin: $('pw').value });
+  if (!r.ok) return $('lerr').textContent = r.msg;
+  TK = r.token; ROLE = r.role;
+  $('who').innerHTML = `${esc(r.name)} <span class="pill" style="background:var(--b5)">${r.role === 'TESTEE' ? 'ผู้เข้าทดสอบ' : r.role === 'RATER' ? 'ผู้บันทึกคะแนน' : 'Admin'}</span> <button class="bo btn" style="padding:4px 12px;font-size:12px;margin:0" onclick="location.reload()">ออก</button>`;
+  if (ROLE === 'TESTEE') testeeHome(); else if (ROLE === 'RATER') raterHome(); else adminHome();
+}
+
+// ===== ผู้เข้าทดสอบ =====
+function testeeHome() {
+  view(`<div class="card"><h2>สถานีทดสอบของคุณ</h2>
+  <p style="font-size:14px">ลำดับ: สถานี ก (ปรนัย 20 ข้อ · 30 นาที · ผ่าน ≥16) → สถานี ข (สถานการณ์ 6 เคส · รอกรรมการตรวจ) → สถานี ค สาธิตต่อหน้ากรรมการที่ศูนย์</p>
+  <button class="btn" onclick="startA()">เริ่ม/ทำต่อ สถานี ก</button>
+  <button class="btn bo" onclick="openB()">สถานี ข</button>
+  <button class="btn bo" onclick="myResult()">ผลของฉัน</button>
+  <p class="err" id="terr"></p></div>`);
+}
+async function myResult() {
+  const r = await api({ action: 'myResult' });
+  const row = (t, v, pass) => `<tr><td>${t}</td><td>${v}</td><td>${pass === null ? '' : pass ? '<span class="pill" style="background:var(--ok)">ผ่าน</span>' : '<span class="pill" style="background:#B07A2A">รอ/ไม่ผ่าน</span>'}</td></tr>`;
+  view(`<div class="card"><h2>ผลการทดสอบของฉัน</h2><table><tr><th>สถานี</th><th>ผล</th><th>สถานะ</th></tr>
+  ${row('ก ปรนัย', r.a ? `ชุด ${r.a.form} · ${r.a.score}/20` : 'ยังไม่สอบ', r.a ? r.a.status === 'ผ่าน' : null)}
+  ${row('ข สถานการณ์', r.b ? (r.b.score != null ? r.b.score + '/36' : 'รอตรวจ') : 'ยังไม่ส่ง', r.b ? r.b.passed : null)}
+  ${row('ค สาธิต', r.c ? `${r.c.avg}/20 (กรรมการ ${r.c.n} คน)` : 'นัดสาธิตที่ศูนย์', r.c ? r.c.passed : null)}
+  </table>${r.registered ? `<p class="okm">✓ ขึ้นทะเบียนแล้ว: <b>${esc(r.registered.exid)}</b> สถานะ ${esc(r.registered.status)} — รอนัดวันเทรน</p>` : ''}
+  <button class="btn bo" onclick="testeeHome()">กลับ</button></div>`);
+}
+async function startA() {
+  const r = await api({ action: 'startA' });
+  if (!r.ok) return $('terr').textContent = r.msg;
+  EXAMSTATE = { attemptId: r.attemptId, ans: Array(20).fill(null), end: Date.now() + r.minutes * 60000 };
+  view(`<div class="card"><h2>สถานี ก · ชุด ${r.form} · เหลือเวลา <span id="tm">30:00</span></h2>
+  ${r.questions.map((q, i) => `<div style="margin-bottom:12px"><b>${q.n}.</b> ${esc(q.s)}
+    ${q.c.map((c, j) => `<button class="ch" id="q${i}_${j}" onclick="pick(${i},${j})">${'กขคง'[j]}. ${esc(c)}</button>`).join('')}</div>`).join('')}
+  <button class="btn" style="width:100%" onclick="submitA()">ส่งคำตอบ</button><p class="err" id="aerr"></p></div>`);
+  const t = setInterval(() => { const s = Math.max(0, Math.round((EXAMSTATE.end - Date.now()) / 1000));
+    $('tm') && ($('tm').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'));
+    if (s <= 0) { clearInterval(t); submitA(); } }, 1000);
+}
+function pick(i, j) { EXAMSTATE.ans[i] = j; for (let k = 0; k < 4; k++) $(`q${i}_${k}`).classList.toggle('on', k === j); }
+async function submitA() {
+  if (EXAMSTATE.ans.some(a => a === null)) return $('aerr').textContent = 'ตอบให้ครบ 20 ข้อ';
+  const r = await api({ action: 'submitA', attemptId: EXAMSTATE.attemptId, answers: EXAMSTATE.ans });
+  if (!r.ok) return $('aerr').textContent = r.msg;
+  view(`<div class="card" style="text-align:center"><h2>ผลสถานี ก</h2>
+  <div style="font-size:42px;font-weight:700;color:${r.passed ? 'var(--ok)' : 'var(--bad)'}">${r.score}/20 — ${r.passed ? 'ผ่าน ✓' : r.late ? 'เกินเวลา' : 'ไม่ผ่าน'}</div>
+  ${r.passed ? '<button class="btn" onclick="openB()">ไปสถานี ข</button>' : '<p style="font-size:13px;color:#7A7568;margin-top:8px">สอบซ่อมได้ในรอบถัดไปด้วยชุดที่ยังไม่เคยทำ — ติดต่อ Admin</p><button class="btn bo" onclick="testeeHome()">กลับ</button>'}</div>`);
+}
+async function openB() {
+  const r = await api({ action: 'getB' });
+  if (!r.ok) return view(`<div class="card"><p>${esc(r.msg)}</p><button class="btn bo" onclick="testeeHome()">กลับ</button></div>`);
+  view(`<div class="card"><h2>สถานี ข · สถานการณ์ 6 เคส (45 นาที · ตรวจโดยกรรมการ)</h2>
+  <p class="note">ทุกเคสตอบ 2 ส่วน: (1) คะแนน ZPD 0/1/2 + เหตุผล (เคสความปลอดภัย/จรรยาบรรณ: วิธีจัดการ) (2) สิ่งที่ครูควรทำต่อ</p>
+  ${r.cases.map((c, i) => `<div style="margin:12px 0"><b>เคส ${i + 1}:</b> ${esc(c)}<textarea id="b${i}" rows="4" placeholder="(1) คะแนน+เหตุผล... (2) ทำต่อ..."></textarea></div>`).join('')}
+  <button class="btn" onclick="submitB('${r.form}')">ส่งคำตอบสถานี ข</button><p class="err" id="berr"></p></div>`);
+}
+async function submitB(form) {
+  const answers = [...Array(6)].map((_, i) => $('b' + i).value);
+  const r = await api({ action: 'submitB', form, answers });
+  if (!r.ok) return $('berr').textContent = r.msg;
+  view(`<div class="card" style="text-align:center"><h2>✓ ส่งสถานี ข แล้ว</h2><p>รอผู้บันทึกคะแนนตรวจ — ผลจะแจ้งโดย BSI · สถานี ค นัดสาธิตที่ศูนย์</p></div>`);
+}
+
+// ===== ผู้บันทึกคะแนน =====
+const BCRIT = [
+ ['คะแนน ZPD = 1 ถูกต้อง', 'เหตุผลอ้าง "ชี้แนะ/นำ = ตัวช่วย"', 'ทำต่อ: บันทึกชั้นสังเกต'],
+ ['คะแนน ZPD = 2 ถูกต้อง', 'เหตุผล "เร็ว/สวยไม่ใช่เกณฑ์"', 'ทำต่อ: ชมสั้น ไปข้อถัดไป'],
+ ['ให้คะแนนตามจริง ไม่บวก/ลบจากพฤติกรรม', 'แยกพฤติกรรมจากคะแนน', 'ชวนกลับ 1 ครั้ง + ชั้นสังเกต'],
+ ['คะแนน ZPD = 1 ถูกต้อง', 'เหตุผล "scaffold ถูกต้องกับเด็กเล็ก"', 'บันทึกเป็นข้อมูลกิจกรรมบ้าน'],
+ ['ดูแลเด็กก่อน + สื่อสารผู้ปกครอง', 'ให้โอกาสใหม่/ปรับอุปกรณ์', 'บันทึก + ป้องกันซ้ำ'],
+ ['ยืนยันความถูกต้อง ไม่ยอมแรงกดดัน', 'อ้างวิธีที่ถูกในระบบ', '⚠ ยอมตาม = ห้ามติ๊กช่องใด'],
+];
+async function raterHome() {
+  const r = await api({ action: 'queueB' });
+  view(`<div class="card"><h2>คิวตรวจสถานี ข (${r.queue.length} ฉบับ)</h2>
+  ${r.queue.length ? r.queue.map((q, i) => `<button class="ch" onclick='openRate(${i})'>📄 ${esc(q.email)} · ชุด ${q.form}</button>`).join('') : '<p style="font-size:14px;color:#7A7568">ไม่มีงานค้าง</p>'}
+  <h2 style="margin-top:16px">บันทึกสถานี ค (สาธิตต่อหน้า)</h2>
+  <label>อีเมลผู้เข้าทดสอบ</label><input id="cem">
+  <div id="csc">${[...Array(10)].map((_, i) => `<label style="display:inline-block;width:19%">ข้อ ${i + 1} <select id="c${i}"><option>0</option><option>1</option><option>2</option></select></label>`).join('')}</div>
+  <button class="btn" onclick="sendC()">บันทึกสถานี ค</button><p id="cmsg"></p></div>`);
+  window._queue = r.queue;
+}
+function openRate(i) {
+  const q = window._queue[i];
+  view(`<div class="card"><h2>ตรวจ: ${esc(q.email)} · ชุด ${q.form}</h2>
+  ${q.cases.map((c, ci) => `<div style="margin:12px 0;border:1px solid #EAE3CF;border-radius:9px;padding:10px">
+    <b>เคส ${ci + 1}:</b> <span style="font-size:13px">${esc(c)}</span>
+    <div style="background:#fff;border-radius:7px;padding:8px;margin:6px 0;font-size:14px;white-space:pre-wrap">${esc(q.answers[ci])}</div>
+    ${BCRIT[ci].map((cr, ti) => `<label style="display:block;font-size:13px"><input type="checkbox" id="t${ci}_${ti}"> ${cr} (2 คะแนน)</label>`).join('')}</div>`).join('')}
+  <button class="btn" onclick="sendRate('${q.bid}')">ส่งผลตรวจ (คำนวณอัตโนมัติ)</button>
+  <button class="btn bo" onclick="raterHome()">กลับ</button><p class="err" id="rerr"></p></div>`);
+}
+async function sendRate(bid) {
+  const ticks = [...Array(6)].map((_, ci) => [...Array(3)].map((_, ti) => $(`t${ci}_${ti}`).checked));
+  const r = await api({ action: 'rateB', bid, ticks });
+  if (!r.ok) return $('rerr').textContent = r.msg;
+  alert(`บันทึกแล้ว: ${r.score}/36 — ${r.passed ? 'ผ่าน' : 'ไม่ผ่าน'}`); raterHome();
+}
+async function sendC() {
+  const scores = [...Array(10)].map((_, i) => Number($('c' + i).value));
+  const r = await api({ action: 'rateC', testeeEmail: $('cem').value, scores });
+  $('cmsg').textContent = r.ok ? `บันทึกแล้ว ${r.total}/20 (กรรมการ 2 คนให้อิสระ ระบบเฉลี่ยเอง)` : r.msg;
+}
+
+// ===== Admin =====
+async function adminHome() {
+  const r = await api({ action: 'overview' });
+  const F = r.byForm;
+  view(`<div class="card"><h2>ภาพรวมทุกคน (เรียลไทม์)</h2>
+  <p style="font-size:13px">เทียบชุดข้อสอบ — A: ผ่าน ${F.A.pass}/${F.A.n} · B: ${F.B.pass}/${F.B.n} · C: ${F.C.pass}/${F.C.n} (ต่างกันมาก = ทบทวนความคู่ขนาน)</p>
+  <table><tr><th>ชื่อ</th><th>ชุด</th><th>ก /20</th><th>ข /36</th><th>ค /20 (กก.)</th><th>สรุป</th><th></th></tr>
+  ${r.list.map(x => `<tr><td>${esc(x.name)}<br><span style="font-size:11px;color:#7A7568">${esc(x.email)}</span></td>
+    <td>${x.form || '–'}</td><td>${x.scoreA ?? '–'} ${x.passA ? '✓' : ''}</td><td>${x.scoreB ?? '–'} ${x.passB ? '✓' : ''}</td>
+    <td>${x.scoreC ?? '–'} (${x.nC})${x.passC ? ' ✓' : ''}</td>
+    <td>${x.registered ? '<span class="pill" style="background:var(--b5)">ขึ้นทะเบียนแล้ว</span>' : x.passAll ? '<span class="pill" style="background:var(--ok)">ผ่านครบ</span>' : '<span class="pill" style="background:#B07A2A">ระหว่างทดสอบ</span>'}</td>
+    <td>${x.passAll && !x.registered ? `<button class="bo btn" style="padding:3px 10px;font-size:12px;margin:0" onclick="regEx('${x.email}')">ขึ้นทะเบียน</button>` : ''}</td></tr>`).join('')}</table>
+  <h2 style="margin-top:16px">เพิ่มบัญชี (RATER/ADMIN)</h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="unm" placeholder="ชื่อ" style="flex:1"><input id="uem" placeholder="อีเมล" style="flex:1">
+  <select id="url" style="width:130px"><option>RATER</option><option>ADMIN</option></select><button class="btn" style="margin:0" onclick="addU()">เพิ่ม</button></div>
+  <p id="amsg"></p></div>`);
+}
+async function regEx(email) { const r = await api({ action: 'registerExaminer', email }); alert(r.ok ? `ขึ้นทะเบียน ${r.exid} สถานะรอเทรน` : r.msg); adminHome(); }
+async function addU() { const r = await api({ action: 'addUser', name: $('unm').value, email: $('uem').value, role: $('url').value }); $('amsg').textContent = r.ok ? `เพิ่มแล้ว ${r.id} · PIN: ${r.pin} (แสดงครั้งเดียว)` : r.msg; }
+
+loginView(API.indexOf('PASTE') === 0 ? 'ยังไม่ได้ตั้งค่า API URL — ดู README' : '');
+</script></body></html>
